@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Model weights and generated files
+*.pt
+*.onnx
+*.engine
+outputs/*
+!outputs/.gitkeep
+
+# Notebook checkpoints
+.ipynb_checkpoints/
