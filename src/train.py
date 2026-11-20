@@ -82,7 +82,7 @@ def main() -> None:
     train_result = model.train(**train_options)
     training_seconds = time.perf_counter() - start
 
-    run_dir = Path(train_result.save_dir)
+    run_dir = Path(model.trainer.save_dir)
     best_weights = run_dir / "weights" / "best.pt"
     last_weights = run_dir / "weights" / "last.pt"
     if not best_weights.exists():
