@@ -1,121 +1,101 @@
 # Real-Time Object Detection
 
-A small Python project for detecting common objects in images and video using a pretrained YOLO model. OpenCV handles image/video input and display, while Ultralytics provides the model interface.
-
-This repository is a practical starting point for the Computer Vision Specialist Internship. The first milestone focuses on a clean inference pipeline and the algorithm/data strategy. It does **not** claim custom training or measured benchmark results yet.
-
-## What it does
-
-- Runs object detection on a single image.
-- Processes a video file or webcam stream frame by frame.
-- Lets you change the model, confidence threshold, and inference image size.
-- Saves annotated image/video outputs when requested.
-- Keeps image preparation in a separate module so it is easier to test and improve.
+A Python object-detection project using YOLO and OpenCV. It supports image, video, and webcam inference, plus a reproducible Week 2 model fine-tuning workflow.
 
 ## Project layout
 
-```
-real-time-object-detection/
-├── README.md
-├── requirements.txt
-├── .gitignore
-├── docs/
-│   └── week1_algorithm_design.md
-├── src/
-│   ├── __init__.py
-│   ├── detection.py
-│   ├── preprocessing.py
-│   └── video_detection.py
-├── notebooks/
-│   └── README.md
-└── outputs/
-    └── .gitkeep
-```
+    real-time-object-detection/
+    ├── README.md
+    ├── requirements.txt
+    ├── configs/
+    │   └── coco128.yaml
+    ├── docs/
+    │   ├── week1_algorithm_design.md
+    │   └── week2_training_report.md
+    ├── notebooks/
+    │   ├── README.md
+    │   └── week2_yolo_training.ipynb
+    ├── src/
+    │   ├── detection.py
+    │   ├── preprocessing.py
+    │   ├── train.py
+    │   └── video_detection.py
+    └── training_logs/
+        ├── README.md
+        └── RESULTS_TEMPLATE.md
 
 ## Setup
 
 Python 3.10 or newer is recommended.
 
-```bash
-git clone https://github.com/TanayChaubey/real-time-object-detection.git
-cd real-time-object-detection
+    git clone https://github.com/TanayChaubey/real-time-object-detection.git
+    cd real-time-object-detection
+    python -m venv .venv
+    source .venv/bin/activate
+    pip install -r requirements.txt
 
-python -m venv .venv
-# Windows:
-.venv\Scripts\activate
-# macOS / Linux:
-source .venv/bin/activate
+On Windows, activate the environment with .venv\Scripts\activate.
 
-pip install -r requirements.txt
-```
+## Inference
 
-The first run may download the selected pretrained model weights. Check the model's license and terms for your intended use.
+Image:
 
-## Run detection
+    python -m src.detection --source path/to/image.jpg --save
 
-### Image
+Video:
 
-```bash
-python -m src.detection --source path/to/image.jpg --save
-```
+    python -m src.video_detection --source path/to/video.mp4 --save
 
-### Video file
+Webcam:
 
-```bash
-python -m src.video_detection --source path/to/video.mp4 --save
-```
+    python -m src.video_detection --source 0
 
-### Webcam
+Press q to stop video or webcam processing.
 
-```bash
-python -m src.video_detection --source 0
-```
+## Week 2 — Train the detector
 
-Press `q` in the display window to stop video or webcam processing.
+The training baseline fine-tunes pretrained YOLO11n weights on the public COCO128 sample dataset using PyTorch through Ultralytics. The first run downloads the checkpoint and dataset.
 
-## Useful options
+    python -m src.train
 
-Both scripts accept common options:
+Optional configuration:
 
-- `--model`: model checkpoint (default: `yolo11n.pt`).
-- `--conf`: confidence threshold (default: `0.25`).
-- `--imgsz`: inference image size (default: `640`).
-- `--device`: device such as `cpu` or `0` (default: automatic selection).
-- `--save-dir`: output directory (default: `outputs`).
+    python -m src.train --epochs 50 --imgsz 640 --batch 8 --seed 42
 
-Example:
+For a constrained machine, lower the batch size:
 
-```bash
-python -m src.detection --source road.jpg --conf 0.35 --imgsz 640 --save
-```
+    python -m src.train --epochs 20 --imgsz 416 --batch 4
 
-## Pipeline at a glance
+For a short CPU smoke test:
 
-1. Read and validate the source.
-2. Pass the frame to the model API.
-3. Run model inference.
-4. Apply confidence filtering and the model package's post-processing/NMS.
-5. Render labels and boxes, then optionally save the result.
+    python -m src.train --device cpu --epochs 3 --batch 2
 
-The Ultralytics prediction API performs model-specific preprocessing and post-processing internally. The separate preprocessing module contains reusable validation and image utility functions. Do not normalize or letterbox a frame manually and then pass it into the high-level API unless that API explicitly expects such input.
+The full documented workflow is in notebooks/week2_yolo_training.ipynb. The methodology, parameters, evaluation metrics, limitations, and improvement plan are in docs/week2_training_report.md.
+
+## Training outputs
+
+The script writes epoch history, plots, checkpoints, and a JSON summary under runs/week2/yolo11n_coco128 by default. Important files include:
+
+- results.csv — training and validation history.
+- results.png — loss and metric curves.
+- confusion_matrix.png — class confusion visualization, when generated.
+- weights/best.pt — best checkpoint.
+- week2_summary.json — actual validation metrics and experiment settings.
+
+Generated runs and model weights are ignored by Git to avoid large accidental commits. Copy the actual small logs/plots into training_logs if needed for submission.
+
+## Dataset and metric caveat
+
+COCO128 is a small public sample dataset used to verify the training pipeline. It is not sufficient to claim production-level accuracy or generalization. The report deliberately contains no fabricated metric values. Run training and validation, then use the generated results.csv and week2_summary.json to complete the results section.
+
+For object detection, report precision, recall, mAP@50, and mAP@50–95. Also inspect box/classification/DFL losses, per-class behavior, false positives, false negatives, and runtime on identified hardware.
 
 ## Current status
 
-- [x] Week 1 algorithm and data strategy documented.
-- [x] Initial image inference script.
-- [x] Initial video/webcam inference script.
-- [ ] Test with the internship's target dataset.
-- [ ] Add annotation validation and group-aware dataset splitting.
-- [ ] Fine-tune a model if a labelled target-domain dataset is provided.
-- [ ] Record mAP, latency, FPS, hardware, and experiment settings.
-- [ ] Add real sample outputs after running the pipeline.
-
-## Evaluation plan
-
-For a labelled detection dataset, report per-class Precision, Recall, AP, mAP@50, and mAP@50–95. For runtime, measure preprocessing, inference, post-processing, and end-to-end latency separately, then report FPS with hardware, image size, batch size, and precision mode. No numeric accuracy or FPS result is claimed in this initial milestone.
-
-## Notes
-
-- A pretrained COCO model is a generic starting point; it may not perform well on every local camera or road-scene condition.
-- Split video data by sequence/camera/session where possible to reduce near-duplicate leakage.
-- This is an educational prototype, not a safety-critical driving system.
+- [x] Week 1 algorithm and preprocessing strategy.
+- [x] Image, video, and webcam inference scripts.
+- [x] Week 2 YOLO11n training script.
+- [x] Documented Week 2 notebook and report.
+- [ ] Execute the training run and preserve genuine logs/plots.
+- [ ] Evaluate on a larger independent or target-domain dataset.
+- [ ] Compare model sizes and augmentation settings.
