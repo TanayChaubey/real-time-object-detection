@@ -1,0 +1,7 @@
+path: coco128
+train: images/train2017
+val: images/train2017
+
+# COCO class names are supplied by the Ultralytics dataset definition.
+# This small 128-image sample is intended for pipeline validation, not
+# production-quality benchmarking.
