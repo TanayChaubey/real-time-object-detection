@@ -19,6 +19,7 @@ Thumbs.db
 *.pt
 *.onnx
 *.engine
+runs/
 outputs/*
 !outputs/.gitkeep
 
