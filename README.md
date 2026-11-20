@@ -7,8 +7,6 @@ A Python object-detection project using YOLO and OpenCV. It supports image, vide
     real-time-object-detection/
     ├── README.md
     ├── requirements.txt
-    ├── configs/
-    │   └── coco128.yaml
     ├── docs/
     │   ├── week1_algorithm_design.md
     │   └── week2_training_report.md
