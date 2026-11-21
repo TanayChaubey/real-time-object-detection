@@ -97,3 +97,21 @@ For object detection, report precision, recall, mAP@50, and mAP@50–95. Also in
 - [ ] Execute the training run and preserve genuine logs/plots.
 - [ ] Evaluate on a larger independent or target-domain dataset.
 - [ ] Compare model sizes and augmentation settings.
+
+## Week 3 — Real-time inference optimization
+
+The original `src/video_detection.py` remains the baseline. The optimized path is in `src/optimized_video_detection.py` and supports a smaller input size (default 512), optional FP16 on compatible CUDA devices, frame stride, and a configurable maximum detections per frame.
+
+Run optimized video inference:
+
+    python -m src.optimized_video_detection --source path/to/video.mp4 --imgsz 512 --no-display
+
+On a supported CUDA GPU, add `--half` to enable FP16. Do not expect FP16 acceleration on CPU or Apple MPS.
+
+Compare inference settings on a fixed image folder:
+
+    python -m src.benchmark_optimization --source data/benchmark_images --baseline-imgsz 640 --optimized-imgsz 512 --warmup 5 --repeats 3
+
+The benchmark writes `training_logs/week3_benchmark.json` with mean/median/P95 latency, throughput, speedup, and prediction agreement. Prediction agreement is not ground-truth accuracy. Evaluate precision, recall, and mAP on a labelled validation set before claiming no accuracy loss.
+
+See `docs/week3_optimization_report.md` and `training_logs/WEEK3_RESULTS_TEMPLATE.md` for the methodology and results record. Actual hardware measurements must be collected locally; none are fabricated in the report.
