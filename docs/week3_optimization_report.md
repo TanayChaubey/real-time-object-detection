@@ -1,31 +1,34 @@
 # Week 3 — Real-Time Performance Optimization
 
 **Project:** Real-Time Object Detection  
-**Baseline:** YOLO11n inference through the existing `src/video_detection.py`  
+**Baseline:** YOLO11n inference at 640-pixel input resolution  
 **Optimized path:** `src/optimized_video_detection.py`  
-**Benchmark:** `src/benchmark_optimization.py`
-
-> Benchmark status: source code and repeatable measurement procedure are provided. Hardware measurements have not yet been run in this environment. No speedup, FPS, latency, or accuracy result is invented. Run the benchmark and insert its JSON output before submitting measured claims.
+**Benchmark:** `src/benchmark_optimization.py`  
+**Test hardware:** Apple MacBook Air M1  
+**Execution device:** Apple MPS  
+**Benchmark status:** Completed on 30 images, with 5 warm-up images and 3 timed repeats.
 
 ## 1. Objective
 
-The goal is to reduce inference latency and improve throughput while monitoring any change in detection outputs. The Week 2 YOLO11n checkpoint is reused so the comparison isolates inference-time settings rather than comparing different model architectures or training runs.
+The goal is to reduce inference latency and improve throughput while monitoring changes in model outputs. The same YOLO11n checkpoint and image set were used for the baseline and optimized configurations so the comparison focuses on inference-time settings rather than different model architectures or training runs.
 
 ## 2. Bottleneck analysis
 
-The main costs in a video detector are image resizing/letterboxing, tensor preparation and host-to-device transfer, neural-network forward execution, non-maximum suppression, drawing boxes, frame decoding, and display or video encoding. On smaller devices, model execution and per-frame preprocessing are usually important costs; display and encoding can also limit end-to-end throughput.
+The main costs in a video detector are image resizing/letterboxing, tensor preparation and host-to-device transfer, neural-network forward execution, non-maximum suppression, drawing boxes, frame decoding, and display or video encoding. On smaller devices, model execution and per-frame preprocessing are important costs; display and encoding can also limit end-to-end throughput.
 
-The original video script already loads the model once and reuses it across frames. The Week 3 implementation preserves this behavior rather than repeatedly loading weights.
+The model is loaded once and reused across frames. The Week 3 implementation preserves this behavior rather than repeatedly loading weights.
 
 ## 3. Optimization techniques
 
 ### 3.1 Lower inference resolution
 
-The baseline uses 640-pixel input. The optimized script defaults to 512 pixels. Fewer input pixels reduce the work in convolutional layers and intermediate feature maps. This can improve speed, but small or distant objects may become harder to detect. The setting is configurable so 640 and 512 can be compared on identical inputs.
+The baseline uses 640-pixel input. The optimized benchmark uses 512 pixels. Fewer input pixels reduce the work in convolutional layers and intermediate feature maps. This improved measured inference speed in this experiment, but small or distant objects may become harder to detect. The setting remains configurable so 640 and 512 can be compared on identical inputs.
 
 ### 3.2 FP16 inference on supported CUDA devices
 
-The optimized video script exposes `--half`. It enables half-precision inference only when CUDA is available and a CUDA device is selected. FP16 can reduce memory traffic and improve throughput on compatible GPUs. It is not forced on CPU or Apple MPS because backend support and numerical behavior differ. On unsupported hardware, leave `--half` off.
+The optimized video script exposes `--half`. It enables half-precision inference only when CUDA is available and a CUDA device is selected. FP16 can reduce memory traffic and improve throughput on compatible GPUs. It is not forced on CPU or Apple MPS because backend support and numerical behavior differ.
+
+**For this benchmark, FP16 was disabled.** Both configurations ran without half precision on Apple MPS. Therefore, the measured improvement should be attributed to the input-resolution change and benchmark configuration, not FP16.
 
 ### 3.3 Frame stride
 
@@ -37,9 +40,7 @@ The optimized path sets a configurable maximum number of detections per frame (d
 
 ### 3.5 Reuse and measurement discipline
 
-The model is loaded once outside the frame loop. Benchmarking includes warm-up iterations and reports mean, median, and 95th-percentile latency. CUDA synchronization is used around timed inference when benchmarking a CUDA device so asynchronous GPU work is included.
-
-No structured pruning or quantization conversion is applied in this iteration. These techniques can alter model behavior or require backend-specific calibration/export; the selected changes are easier to reproduce and compare on the existing YOLO workflow.
+The model is loaded once outside the frame loop. The benchmark uses warm-up iterations and reports mean, median, and 95th-percentile latency. The same 30 images were evaluated in both configurations, with 5 warm-up images and 3 timed repeats (90 timed image inferences per configuration).
 
 ## 4. Benchmark procedure
 
@@ -49,33 +50,23 @@ Install project dependencies:
 pip install -r requirements.txt
 ```
 
-Place a representative, fixed set of images in a folder, for example `data/benchmark_images/`. Use the same images, model checkpoint, confidence threshold, and device for both configurations.
+Place a representative, fixed set of images in `data/benchmark_images/`. Use the same images, model checkpoint, confidence threshold, and device for both configurations.
 
-Run the baseline video implementation:
-
-```bash
-python -m src.video_detection --source path/to/test_video.mp4 --imgsz 640 --conf 0.25
-```
-
-Run the optimized video implementation:
+The benchmark was run on the Apple M1 using MPS:
 
 ```bash
-python -m src.optimized_video_detection --source path/to/test_video.mp4 --imgsz 512 --conf 0.25 --no-display
+python -m src.benchmark_optimization --source data/benchmark_images --device mps --baseline-imgsz 640 --optimized-imgsz 512 --warmup 5 --repeats 3
 ```
 
-On a CUDA GPU, optionally enable FP16:
+The benchmark output is saved to `training_logs/week3_benchmark.json`.
+
+The video inference script can be run separately:
 
 ```bash
-python -m src.optimized_video_detection --source path/to/test_video.mp4 --imgsz 512 --half --no-display
+python -m src.optimized_video_detection --source path/to/test_video.mp4 --device mps --imgsz 512
 ```
 
-Benchmark baseline versus optimized settings on an image folder:
-
-```bash
-python -m src.benchmark_optimization --source data/benchmark_images --model yolo11n.pt --baseline-imgsz 640 --optimized-imgsz 512 --warmup 5 --repeats 3
-```
-
-The benchmark automatically enables FP16 for the optimized configuration only when CUDA is available. Use a fixed local copy of the same images and avoid mixing different image sets between runs.
+The image-folder benchmark measures model inference latency per image. It is not a measurement of full camera-to-display video FPS.
 
 ## 5. Metrics
 
@@ -85,36 +76,64 @@ The benchmark automatically enables FP16 for the optimized configuration only wh
 - **Throughput (FPS):** reciprocal of mean latency for the timed inference call.
 - **Speedup:** baseline mean latency divided by optimized mean latency.
 - **Prediction agreement:** proportion of baseline detections matched by optimized detections of the same class at IoU ≥ 0.50. This is a consistency check, not ground-truth accuracy.
-- **Precision, recall, mAP:** must be evaluated on labelled validation data to assess accuracy impact. The benchmark script does not claim these metrics.
+- **Precision, recall, mAP:** must be evaluated on labelled validation data to assess accuracy impact. The benchmark script does not calculate these metrics.
 
-## 6. Results table — populate from a real run
+## 6. Measured results
 
-| Metric | Baseline (640, FP32) | Optimized (512, device-dependent FP16) |
+**Test configuration**
+
+| Parameter | Value |
+|---|---|
+| Model | YOLO11n (`yolo11n.pt`) |
+| Machine | Apple MacBook Air M1 |
+| Device | Apple MPS |
+| Images evaluated | 30 |
+| Warm-up images | 5 |
+| Repeats | 3 |
+| Timed inferences per configuration | 90 |
+| Baseline input size | 640 |
+| Optimized input size | 512 |
+| FP16 | Disabled for both configurations |
+
+**Benchmark measurements**
+
+| Metric | Baseline (640, FP32) | Optimized (512, FP32) |
 |---|---:|---:|
-| Mean latency (ms) | Run benchmark | Run benchmark |
-| Median latency (ms) | Run benchmark | Run benchmark |
-| P95 latency (ms) | Run benchmark | Run benchmark |
-| Throughput (FPS) | Run benchmark | Run benchmark |
-| Speedup | 1.00× reference | Read JSON output |
-| Prediction agreement (IoU 0.50) | Reference | Read JSON output |
-| Precision / Recall / mAP | Evaluate labelled set | Evaluate labelled set |
+| Mean latency (ms) | 26.20 | 13.56 |
+| Median latency (ms) | 15.32 | 11.01 |
+| P95 latency (ms) | 35.58 | 13.81 |
+| Throughput (FPS) | 38.16 | 73.75 |
 
-The benchmark writes `training_logs/week3_benchmark.json`. Copy its actual values into this table. For a fair accuracy comparison, validate both settings on the same labelled split and compare precision, recall, mAP@50, and mAP@50–95. Prediction agreement alone is not a substitute.
+- **Measured speedup:** 1.93×.
+- **Throughput increase:** approximately 93.24%.
+- **Mean latency reduction:** approximately 48.25%.
+- **P95 latency reduction:** approximately 61.19%.
+- **Prediction agreement at IoU 0.50:** 86.41%.
+
+The optimized configuration produced substantially lower measured latency and higher inference throughput on this test set. Prediction agreement of 86.41% indicates that some detections differed between the two input sizes. This is expected to be monitored because reducing input resolution can affect smaller or less prominent objects.
+
+These figures describe this particular machine, model, image set, and benchmark run. They should not be generalized to other hardware or described as end-to-end video FPS.
+
+**Accuracy limitation:** Precision, recall, mAP@50, and mAP@50–95 were not measured because this benchmark run did not use ground-truth labels. Do not report the prediction-agreement score as model accuracy.
 
 ## 7. Trade-offs and limitations
 
-Reducing image size can reduce recall for small objects. FP16 may introduce small numerical differences and is hardware-dependent. Frame skipping reduces temporal sampling and may miss brief events. A maximum-detection cap can truncate crowded scenes. FPS measured for a single image inference call is not necessarily end-to-end camera FPS; report both when possible and name the hardware, software versions, device, image size, and video codec.
+Reducing image size can reduce recall for small objects. The measured 86.41% prediction agreement confirms that the optimized outputs were not identical to baseline outputs. FP16 was not used in this MPS experiment. Frame skipping reduces temporal sampling and may miss brief events. A maximum-detection cap can truncate crowded scenes. FPS measured for a single image inference call is not necessarily end-to-end camera FPS; report both when possible and name the hardware, software versions, device, image size, and video codec.
+
+The benchmark output also displayed a deprecation warning related to the `half` argument. It did not prevent completion, and half precision was disabled in the recorded MPS measurements.
 
 ## 8. Further work
 
-1. Export to ONNX and benchmark an optimized runtime such as ONNX Runtime on the target hardware.
-2. Evaluate TensorRT FP16/INT8 on supported NVIDIA hardware, using representative calibration data for INT8.
-3. Apply structured channel pruning only with fine-tuning and a measured accuracy comparison.
-4. Benchmark different YOLO model sizes and input resolutions on the deployment device.
-5. Use asynchronous frame capture and a bounded queue if camera decoding blocks inference.
-6. Add object tracking so detections need not be recomputed on every frame, while validating tracking drift and ID switches.
+1. Evaluate both input sizes on a labelled validation set and compare precision, recall, mAP@50, and mAP@50–95.
+2. Run the video pipeline on a fixed test video and record end-to-end FPS separately from model inference FPS.
+3. Export to ONNX and benchmark an optimized runtime such as ONNX Runtime on the target hardware.
+4. Evaluate TensorRT FP16/INT8 on supported NVIDIA hardware, using representative calibration data for INT8.
+5. Benchmark different YOLO model sizes and input resolutions on the deployment device.
+6. Use asynchronous frame capture and a bounded queue if camera decoding blocks inference.
 7. Profile preprocessing, inference, NMS, drawing, and encoding separately before optimizing further.
 
 ## 9. Conclusion
 
-Week 3 adds a separate optimized video inference path and a repeatable baseline-versus-optimized benchmark while preserving the original implementation as a reference. The initial optimization focuses on lower input resolution, optional CUDA FP16, configurable frame stride, bounded detections, and warm-up-aware latency measurement. Actual speed and accuracy trade-offs must be established by running the benchmark on the intended hardware and evaluating both configurations against labelled data.
+The Week 3 benchmark on an Apple MacBook Air M1 using Apple MPS measured 38.16 FPS at 640 input resolution and 73.75 FPS at 512 input resolution. This corresponds to a 1.93× throughput speedup and a 48.25% reduction in mean inference latency for the tested image set. The optimized configuration had 86.41% prediction agreement with the baseline at IoU 0.50, so the speed improvement comes with some change in detections.
+
+The results support using 512 input resolution as a promising faster configuration for this test setup, but a labelled validation run is still required before concluding that detection accuracy is acceptable for deployment.
