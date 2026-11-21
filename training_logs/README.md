@@ -5,3 +5,7 @@ Run the Week 2 training script to generate real logs and metrics. Ultralytics wr
 The generated run directory is intentionally ignored by Git because checkpoints and generated plots can be large. For submission, export or copy the relevant results.csv, week2_summary.json, results.png, and confusion_matrix.png into this folder after completing a real run. Do not fill this folder with estimated or fabricated metrics.
 
 The COCO128 dataset is a small public sample for checking the training pipeline. Its score should not be presented as a reliable measure of generalization.
+
+## Week 3 performance benchmark
+
+Run `python -m src.benchmark_optimization --source data/benchmark_images` from the repository root. The script writes `week3_benchmark.json` with latency, throughput, speedup, and baseline-to-optimized prediction agreement. Record hardware and fill `WEEK3_RESULTS_TEMPLATE.md` from actual measurements. Prediction agreement is not a substitute for labelled-set precision, recall, or mAP.
