@@ -1,0 +1,28 @@
+{
+  "model": "yolo11n.pt",
+  "device": "mps",
+  "image_count": 30,
+  "warmup_images": 5,
+  "repeats": 3,
+  "baseline": {
+    "image_size": 640,
+    "half_precision": false,
+    "images_in_timed_runs": 90,
+    "mean_latency_ms": 26.203640778031616,
+    "median_latency_ms": 15.323229134082794,
+    "p95_latency_ms": 35.57700011879206,
+    "throughput_fps": 38.1626358135077
+  },
+  "optimized": {
+    "image_size": 512,
+    "half_precision": false,
+    "images_in_timed_runs": 90,
+    "mean_latency_ms": 13.560009297604363,
+    "median_latency_ms": 11.011562775820494,
+    "p95_latency_ms": 13.806624803692102,
+    "throughput_fps": 73.74626211920587
+  },
+  "speedup": 1.9324205612942311,
+  "mean_prediction_agreement_iou50": 0.8640606183175843,
+  "interpretation": "Prediction agreement compares optimized outputs with baseline outputs. It is not ground-truth precision, recall, or mAP."
+}
