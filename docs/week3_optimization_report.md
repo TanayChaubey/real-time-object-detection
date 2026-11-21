@@ -14,9 +14,17 @@ The goal is to reduce inference latency and improve throughput while monitoring 
 
 ## 2. Bottleneck analysis
 
-The main costs in a video detector are image resizing/letterboxing, tensor preparation and host-to-device transfer, neural-network forward execution, non-maximum suppression, drawing boxes, frame decoding, and display or video encoding. On smaller devices, model execution and per-frame preprocessing are important costs; display and encoding can also limit end-to-end throughput.
+A detector's processing path contains several distinct cost centres. The table below identifies where work occurs and how it can affect throughput. These are code-path and architecture observations, not per-stage profiler measurements; the current benchmark times the complete `model.predict()` call and does not isolate each stage.
 
-The model is loaded once and reused across frames. The Week 3 implementation preserves this behavior rather than repeatedly loading weights.
+| Component | Work performed | Likely performance impact | Evidence / status |
+|---|---|---|---|
+| Frame decoding | Reads frames from the video source through OpenCV | Can limit end-to-end FPS when storage or decoding is slow | Not separately timed |
+| Preprocessing | Validates frames, resizes/letterboxes and prepares model input | Cost grows with image dimensions and data movement | Resolution comparison measured; stage time not isolated |
+| Neural-network inference | YOLO forward pass through convolutional layers | Major compute cost, especially on constrained hardware | Included in measured `model.predict()` latency; not isolated |
+| Post-processing | Confidence filtering and non-maximum suppression | Cost can rise with many candidate detections | `max_det` is configurable; stage time not isolated |
+| Annotation and output | Draws boxes, displays frames and optionally encodes video | Can reduce end-to-end throughput even when inference is fast | Not included in image-folder benchmark |
+
+The model is loaded once and reused across frames, avoiding repeated weight-loading overhead. The current benchmark measures the combined prediction call rather than claiming that any one internal stage is the measured bottleneck. A profiler or stage-level timers would be needed to rank those components quantitatively.
 
 ## 3. Optimization techniques
 
@@ -41,6 +49,42 @@ The optimized path sets a configurable maximum number of detections per frame (d
 ### 3.5 Reuse and measurement discipline
 
 The model is loaded once outside the frame loop. The benchmark uses warm-up iterations and reports mean, median, and 95th-percentile latency. The same 30 images were evaluated in both configurations, with 5 warm-up images and 3 timed repeats (90 timed image inferences per configuration).
+
+### 3.6 Implementation excerpts
+
+The following excerpts show the actual optimisation controls in `src/optimized_video_detection.py`.
+
+**Load the model once and enable FP16 only on supported CUDA hardware:**
+
+```python
+device = args.device or ("0" if torch.cuda.is_available() else "cpu")
+use_half = bool(args.half and torch.cuda.is_available() and device != "cpu")
+model = YOLO(args.model)  # Load once; do not reload per frame.
+```
+
+**Skip frames when the application can tolerate a lower temporal sampling rate:**
+
+```python
+frame_index += 1
+if (frame_index - 1) % args.frame_stride:
+    continue
+```
+
+**Run inference with configurable resolution and a bounded detection count:**
+
+```python
+result = model.predict(
+    source=frame,
+    imgsz=args.imgsz,
+    conf=args.conf,
+    device=device,
+    half=use_half,
+    max_det=args.max_det,
+    verbose=False,
+)[0]
+```
+
+The benchmark's timing uses `time.perf_counter()` around the prediction call and reports mean, median, P95 and reciprocal-mean throughput. These snippets are illustrative excerpts; the complete runnable implementation is in the linked source files.
 
 ## 4. Benchmark procedure
 
@@ -96,6 +140,10 @@ The image-folder benchmark measures model inference latency per image. It is not
 | FP16 | Disabled for both configurations |
 
 **Benchmark measurements**
+
+![Week 3 performance comparison](images/week3_performance_comparison.svg)
+
+*Figure 1. Measured image-inference latency and throughput for the same 30-image set on Apple MPS. Lower latency and higher throughput are better.*
 
 | Metric | Baseline (640, FP32) | Optimized (512, FP32) |
 |---|---:|---:|
