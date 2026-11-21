@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="430" viewBox="0 0 1000 430">
+<rect width="1000" height="430" fill="#ffffff"/>
+<text x="250" y="34" font-family="Arial,sans-serif" font-size="22" font-weight="bold" text-anchor="middle" fill="#222">Mean inference latency (ms)</text>
+<text x="750" y="34" font-family="Arial,sans-serif" font-size="22" font-weight="bold" text-anchor="middle" fill="#222">Inference throughput (FPS)</text>
+<line x1="90" y1="340" x2="430" y2="340" stroke="#555" />
+<line x1="590" y1="340" x2="930" y2="340" stroke="#555" />
+<rect x="135" y="93" width="90" height="247" rx="5" fill="#64748b"/>
+<rect x="285" y="212" width="90" height="128" rx="5" fill="#0f766e"/>
+<text x="180" y="80" text-anchor="middle" font-family="Arial" font-size="19" fill="#222">26.20</text>
+<text x="330" y="199" text-anchor="middle" font-family="Arial" font-size="19" fill="#222">13.56</text>
+<text x="180" y="370" text-anchor="middle" font-family="Arial" font-size="17" fill="#222">Baseline</text>
+<text x="330" y="370" text-anchor="middle" font-family="Arial" font-size="17" fill="#222">Optimized</text>
+<rect x="635" y="212" width="90" height="128" rx="5" fill="#64748b"/>
+<rect x="785" y="93" width="90" height="247" rx="5" fill="#0f766e"/>
+<text x="680" y="199" text-anchor="middle" font-family="Arial" font-size="19" fill="#222">38.16</text>
+<text x="830" y="80" text-anchor="middle" font-family="Arial" font-size="19" fill="#222">73.75</text>
+<text x="680" y="370" text-anchor="middle" font-family="Arial" font-size="17" fill="#222">Baseline</text>
+<text x="830" y="370" text-anchor="middle" font-family="Arial" font-size="17" fill="#222">Optimized</text>
+<rect x="350" y="402" width="18" height="12" fill="#64748b"/><text x="375" y="413" font-family="Arial" font-size="14" fill="#333">640 px</text>
+<rect x="460" y="402" width="18" height="12" fill="#0f766e"/><text x="485" y="413" font-family="Arial" font-size="14" fill="#333">512 px</text>
+</svg>
