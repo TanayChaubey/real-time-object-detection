@@ -10,6 +10,9 @@ from src import api
 
 
 class FakeBoxes:
+    def __len__(self):
+        return 1
+
     def __init__(self):
         self.xyxy = FakeTensor([[1, 2, 20, 30]])
         self.conf = FakeTensor([0.91])
