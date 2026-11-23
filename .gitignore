@@ -25,3 +25,6 @@ outputs/*
 
 # Notebook checkpoints
 .ipynb_checkpoints/
+
+# Local benchmark dataset
+data/
