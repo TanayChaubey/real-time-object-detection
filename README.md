@@ -6,10 +6,12 @@ A Python object-detection project using YOLO and OpenCV. It supports image, vide
 
     real-time-object-detection/
     ├── README.md
+    ├── app.py
     ├── requirements.txt
     ├── docs/
     │   ├── week1_algorithm_design.md
-    │   └── week2_training_report.md
+    │   ├── week2_training_report.md
+    │   └── week4_integration_report.md
     ├── notebooks/
     │   ├── README.md
     │   └── week2_yolo_training.ipynb
@@ -17,7 +19,10 @@ A Python object-detection project using YOLO and OpenCV. It supports image, vide
     │   ├── detection.py
     │   ├── preprocessing.py
     │   ├── train.py
-    │   └── video_detection.py
+    │   ├── video_detection.py
+    │   └── api.py
+    ├── tests/
+    │   └── test_api.py
     └── training_logs/
         ├── README.md
         └── RESULTS_TEMPLATE.md
@@ -137,7 +142,9 @@ Open `http://localhost:8501`. The API Swagger documentation is at `http://127.0.
 Run API unit tests (the detector is mocked; no weights or GPU are needed):
 
 ```bash
-pytest -q
+python -m pytest -q
 ```
 
-See [docs/week4_integration_report.md](docs/week4_integration_report.md) for architecture, API contracts, test cases, limitations and the completion checklist. The report distinguishes implemented code from tests that still need to be executed locally.
+The automated API tests use a mocked detector and do not require model weights or a GPU. In the tested Anaconda environment, `python -m pytest -q` completed with **4 passed**. The direct `pytest -q` command initially failed to resolve the `src` package, so use the module invocation from the repository root.
+
+The local integration was also manually exercised for API startup, image inference, annotated image output, video inference and MP4 playback. Streamlit image upload was verified; Streamlit video playback, corrupt-video handling and webcam operation remain unverified. See [docs/week4_integration_report.md](docs/week4_integration_report.md) for architecture, API contracts, actual test outcomes and limitations.
