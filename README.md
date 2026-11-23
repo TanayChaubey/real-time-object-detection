@@ -115,3 +115,29 @@ Compare inference settings on a fixed image folder:
 The benchmark writes `training_logs/week3_benchmark.json` with mean/median/P95 latency, throughput, speedup, and prediction agreement. Prediction agreement is not ground-truth accuracy. Evaluate precision, recall, and mAP on a labelled validation set before claiming no accuracy loss.
 
 See `docs/week3_optimization_report.md` and `training_logs/WEEK3_RESULTS_TEMPLATE.md` for the methodology and results record. Actual hardware measurements must be collected locally; none are fabricated in the report.
+
+## Week 4 — Integrated visual inspection prototype
+
+A small quality-inspection simulation is available through a REST API and Streamlit client. The API reuses YOLO11n for image and video inference.
+
+Install the dependencies, then start the API:
+
+```bash
+uvicorn src.api:app --host 127.0.0.1 --port 8000
+```
+
+In a second terminal, start the interface:
+
+```bash
+streamlit run app.py
+```
+
+Open `http://localhost:8501`. The API Swagger documentation is at `http://127.0.0.1:8000/docs`.
+
+Run API unit tests (the detector is mocked; no weights or GPU are needed):
+
+```bash
+pytest -q
+```
+
+See [docs/week4_integration_report.md](docs/week4_integration_report.md) for architecture, API contracts, test cases, limitations and the completion checklist. The report distinguishes implemented code from tests that still need to be executed locally.
