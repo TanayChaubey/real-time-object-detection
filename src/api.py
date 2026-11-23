@@ -12,6 +12,7 @@ import cv2
 import numpy as np
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
+from starlette.background import BackgroundTask
 
 from ultralytics import YOLO
 
@@ -141,12 +142,15 @@ async def detect_video(file: UploadFile = File(...)) -> FileResponse:
         if not Path(output_path).stat().st_size:
             raise HTTPException(status_code=400, detail="No decodable video frames found.")
 
+        def cleanup() -> None:
+            Path(input_path).unlink(missing_ok=True)
+            Path(output_path).unlink(missing_ok=True)
+
         return FileResponse(
             output_path,
             media_type="video/mp4",
             filename="inspection_result.mp4",
-            background=lambda: (Path(input_path).unlink(missing_ok=True),
-                                Path(output_path).unlink(missing_ok=True)),
+            background=BackgroundTask(cleanup),
         )
     except HTTPException:
         Path(input_path).unlink(missing_ok=True)
